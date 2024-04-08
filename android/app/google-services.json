@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "429324769626",
+    "project_id": "reactnative-e9c16",
+    "storage_bucket": "reactnative-e9c16.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:429324769626:android:5f87c05361ff943047bb63",
+        "android_client_info": {
+          "package_name": "com.FinanceApp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDr71jxnDlMH5cGEdJ0ftVge65YG4Eep1M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

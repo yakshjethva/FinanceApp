@@ -1,53 +1,81 @@
-import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View, Animated } from "react-native";
+// Library Imports
+import { StyleSheet, Text, View } from "react-native";
 import _ from "lodash";
+import React, { useEffect, useState } from "react";
+import firestore from "@react-native-firebase/firestore";
+
+// Relative Imports
 import { AppContainer, AppHeader } from "../../components";
 import { Color, Responsive } from "../../utils";
-import { transactionList } from "../../utils/Data";
+import { useFocusEffect } from "@react-navigation/native";
+
+const SUMMARY_COLLECTION = "summary";
+const FirestoreSummary2024 = firestore()
+  .collection(SUMMARY_COLLECTION)
+  .doc("2024");
 
 const InfoScreen = () => {
-  const [animation] = useState(new Animated.Value(0));
+  const [totalTransactions, setTotalTransactions] = useState("");
+  const [totalAmount, setTotalAmount] = useState("");
+  const [maxTransaction, setMaxTransaction] = useState({});
+  const [minTransaction, setMinTransaction] = useState({});
 
   useEffect(() => {
-    Animated.timing(animation, {
-      toValue: 1,
-      duration: 1000,
-      useNativeDriver: true,
-    }).start();
+    FirestoreSummary2024.get().then((doc) => {
+      const data = doc.data();
+      setTotalTransactions(data?.totalTransactions);
+      setTotalAmount(data?.totalAmount);
+      setMaxTransaction(data?.maxTransaction);
+      setMinTransaction(data?.minTransaction);
+    });
   }, []);
 
-  const renderItem = (title: string, answer: string) => (
-    <Animated.View style={[styles.itemContainer, styles.smallItemView, { opacity: animation }]}>
-      <Text style={styles.titleText}>{title}</Text>
-      <Text style={styles.ansText}>{answer}</Text>
-    </Animated.View>
+  useFocusEffect(
+    React.useCallback(() => {
+      FirestoreSummary2024.get().then((doc) => {
+        const data = doc.data();
+        setTotalTransactions(data?.totalTransactions);
+        setTotalAmount(data?.totalAmount);
+        setMaxTransaction(data?.maxTransaction);
+        setMinTransaction(data?.minTransaction);
+      });
+    }, [])
   );
 
-  const renderBigItem = (title: string, item: any) => (
-    <Animated.View style={[styles.itemContainer, styles.itemView, { opacity: animation }]}>
-      <Text style={styles.itemTitleText}>{title}</Text>
-      <View style={styles.itemBottom}>
-        <Text style={styles.titleText}>{item?.title}</Text>
-        <Text style={styles.ansText}>{`$${item?.amount}`}</Text>
+  const renderItem = (title: string, answer: string) => {
+    return (
+      <View style={styles.smallItemView}>
+        <Text style={styles.titleText}>{title}</Text>
+        <Text style={styles.ansText}>{answer}</Text>
       </View>
-    </Animated.View>
-  );
+    );
+  };
 
-  const calculateBalance = () => _.sumBy(transactionList, (item) => Number(item?.amount));
-  const findExtremeTransaction = (selector: any) => _.maxBy(transactionList, selector);
+  const renderBigItem = (title: string, item: any) => {
+    return (
+      <View style={styles.itemView}>
+        <View>
+          <Text style={styles.itemTitleText}>{title}</Text>
+        </View>
+        <View style={styles.itemBottom}>
+          <Text style={styles.titleText}>{item?.title}</Text>
+          <Text style={styles.ansText}>{`$${item?.amount}`}</Text>
+        </View>
+      </View>
+    );
+  };
 
-  const balance = calculateBalance();
-  const high = findExtremeTransaction((item: any) => Number(item?.amount));
-  const low = findExtremeTransaction((item: any) => -Number(item?.amount));
-
+  // const balance = _.sumBy(transactionList, (item) => Number(item?.amount));
+  // const high = _.maxBy(transactionList, (item) => Number(item?.amount));
+  // const low = _.minBy(transactionList, (item) => Number(item?.amount));
   return (
     <AppContainer>
-      <AppHeader titleText="Summary" />
+      <AppHeader titleText={"Summary"} />
       <View style={styles.mainContainer}>
-        {renderItem("Total Transactions", transactionList.length.toString())}
-        {renderItem("Balance", `$${balance}`)}
-        {renderBigItem("Highest Spent Amount", high)}
-        {renderBigItem("Lowest Spent Amount", low)}
+        {renderItem("Transactions", totalTransactions)}
+        {renderItem("Balance", `$${totalAmount}`)}
+        {renderBigItem("High Spending", maxTransaction)}
+        {renderBigItem("Low Spending", minTransaction)}
       </View>
     </AppContainer>
   );
@@ -60,7 +88,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: Responsive.scale(20),
+    paddingHorizontal: Responsive.scale(20)
   },
   itemContainer: {
     width: "100%",
@@ -71,18 +99,23 @@ const styles = StyleSheet.create({
   },
   smallItemView: {
     flexDirection: "row",
+    paddingVertical: Responsive.verticalScale(5),
     justifyContent: "space-between",
+    backgroundColor: Color.white
   },
   itemView: {
-    alignItems: "center",
+    alignItems: 'flex-start',
+    paddingVertical: Responsive.verticalScale(5),
+    backgroundColor: Color.white
   },
   titleText: {
     fontSize: Responsive.font(4),
     color: Color.black,
+    flex: 1
   },
   ansText: {
     fontSize: Responsive.font(4),
-    color: Color.white,
+    color: Color.themeGrey,
     fontWeight: "700",
   },
   itemBottom: {

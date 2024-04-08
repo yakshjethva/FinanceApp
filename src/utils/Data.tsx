@@ -15,7 +15,8 @@ export const transactionList = [
         title: 'Netflix',
         location: 'Toronto, ON',
         date: '2024-01-01',
-        amount: '4376.40'
+        amount: '
+        '
     },
     {
         title: 'Meta Inc.',

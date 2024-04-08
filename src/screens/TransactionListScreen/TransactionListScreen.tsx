@@ -1,56 +1,106 @@
-import React from "react";
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View, Animated, Easing } from "react-native";
+// Library Imports
+import {
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import React, { useEffect, useState } from "react";
+import firestore from "@react-native-firebase/firestore";
+// Relative Imports
 import { AppContainer, AppHeader } from "../../components";
-import { transactionList } from "../../utils/Data";
 import { Color, Images, Responsive, Screen } from "../../utils";
+import _ from "lodash";
+
+const TRANSACTION_LIST = "transactions";
+const SUMMARY_COLLECTION = "summary";
+const FirestoreSummary2024 = firestore()
+  .collection(SUMMARY_COLLECTION)
+  .doc("2024");
+const FirestoreTransactions = firestore().collection(TRANSACTION_LIST);
 
 interface TransactionListScreenProps {
   navigation: any;
 }
 
-const TransactionListScreen: React.FC<TransactionListScreenProps> = ({ navigation }) => {
-  const animatedValue = React.useRef(new Animated.Value(0)).current;
-
-  React.useEffect(() => {
-    Animated.timing(animatedValue, {
-      toValue: 1,
-      duration: 1000,
-      easing: Easing.linear,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
+const TransactionListScreen: React.FC<TransactionListScreenProps> = (props) => {
+  const [transactionList, setTransactionList] = useState([]);
   const onPressItem = (item: any) => {
+    const { navigation } = props;
     navigation.navigate(Screen.TransactionDetailScreen, { item });
   };
 
-  const renderItem = ({ item, index }: { item: any; index: number }) => {
-    const translateY = animatedValue.interpolate({
-      inputRange: [0, 1],
-      outputRange: [-50 * index, 1],
-    });
+  const onPressAdd = () => {
+    const { navigation } = props;
+    navigation.navigate(Screen.AddTransactionScreen);
+  };
 
-    return (
-      <TouchableOpacity style={styles.itemContainer} onPress={() => onPressItem(item)}>
-        <Animated.View style={[styles.itemContent, { transform: [{ translateY }] }]}>
-          <Text style={styles.titleText}>{item?.title}</Text>
-          <Text style={styles.amountText}>{`$${item?.amount}`}</Text>
-        </Animated.View>
-        <Image source={Images.right} style={styles.rightImg} resizeMode="contain" />
-      </TouchableOpacity>
-    );
+  useEffect(() => {
+    getTransactionList();
+    const subscriber = FirestoreTransactions.onSnapshot(setReceivedData);
+    return () => subscriber();
+  }, []);
+
+  const getTransactionList = async () => {
+    FirestoreTransactions.get().then(setReceivedData);
+  };
+
+  const saveSummary = (summary: any) => {
+    FirestoreSummary2024.set(summary);
+  };
+
+  const calculateSummary = (list) => {
+    const totalTransactions = list?.length.toString();
+    const totalAmount = _.sumBy(list, (item) => Number(item?.amount))
+      .toFixed(2)
+      .toString();
+    const maxTransaction = _.maxBy(list, (item) => Number(item?.amount));
+    const minTransaction = _.minBy(list, (item) => Number(item?.amount));
+    saveSummary({
+      totalTransactions,
+      totalAmount,
+      maxTransaction,
+      minTransaction,
+    });
+  };
+
+  const setReceivedData = (transactions: any) => {
+    const tempList: any[] | ((prevState: never[]) => never[]) = [];
+    transactions.docs.map((doc: any) => tempList.push(doc.data()));
+    calculateSummary(tempList);
+    setTransactionList(tempList);
   };
 
   return (
     <AppContainer>
-      <AppHeader />
-      <FlatList
-        data={transactionList}
-        renderItem={renderItem}
-        keyExtractor={(item, index) => index.toString()}
-        contentContainerStyle={styles.flatListContainer}
-        showsVerticalScrollIndicator={false}
-      />
+      <AppHeader isAddButton onPressAdd={onPressAdd} />
+      <View style={styles.flatListContainer}>
+        <FlatList
+          data={transactionList}
+          renderItem={({ item }) => {
+            return (
+              <View style={styles.itemContent}>
+                <View style={styles.itemContent}>
+                  <Text style={styles.titleText}>{item?.title}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.rightTouch}
+                  onPress={() => onPressItem(item)}
+                >
+                  <Text style={styles.amountText}>{`$${item?.amount}`}</Text>
+                  <Image
+                    source={Images.right}
+                    style={styles.rightImg}
+                    resizeMode={"contain"}
+                  />
+                </TouchableOpacity>
+              </View>
+            );
+          }}
+        />
+      </View>
     </AppContainer>
   );
 };
@@ -81,6 +131,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    backgroundColor: Color.themeGrey
   },
   titleText: {
     fontSize: Responsive.font(5),
@@ -94,8 +145,15 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   rightImg: {
-    height: Responsive.verticalScale(20),
+    height: '70%',
     width: Responsive.scale(20),
     tintColor: Color.white,
+    marginLeft: Responsive.scale(10)
   },
+  rightTouch: {
+    flexDirection: 'row',
+    height: Responsive.verticalScale(30),
+    alignItems: 'center',
+    justifyContent: 'center'
+  }
 });
